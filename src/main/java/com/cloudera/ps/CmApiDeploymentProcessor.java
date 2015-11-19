@@ -8,37 +8,43 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import com.fasterxml.jackson.dataformat.xml.XmlFactory;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 public class CmApiDeploymentProcessor {
 
-    private final ObjectMapper mapper = new ObjectMapper();
-
     public CmApiDeploymentProcessor() {
         //
     }
 
-    private void configure(CommandLine cmd) {
-        mapper.configure(SerializationFeature.INDENT_OUTPUT, cmd.hasOption("p"));
+    public void run(CommandLine cmd) throws IOException {
+        JsonNode original = readDeploymentJson(cmd);
+        ObjectMapper outputMapper = buildOutputMapper(cmd);
+        System.out.println(outputMapper.writeValueAsString(runAllTransformers(cmd, original)));
     }
 
-    public void run(CommandLine cmd) throws IOException {
-        configure(cmd);
-        JsonNode original = readDeploymentJson(cmd);
-        System.out.println(mapper.writeValueAsString(runAllTransformers(cmd, original)));
+    private ObjectMapper buildOutputMapper(CommandLine cmd) {
+        //ObjectMapper mapper = new XmlMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, cmd.hasOption("p"));
+        return mapper;
     }
 
     private JsonNode readDeploymentJson(CommandLine cmd) throws IOException {
         if (cmd.hasOption("f") && cmd.hasOption("u")) {
             throw new RuntimeException("Cannot specify both 'file' and 'url' input");
         }
+        ObjectMapper mapper = new ObjectMapper();
         if (cmd.hasOption("f")) {
             String inputPath = cmd.getOptionValue("f");
             return mapper.readValue(FileUtils.readFileToString(new File(inputPath)), JsonNode.class);
@@ -66,6 +72,8 @@ public class CmApiDeploymentProcessor {
             transformerChain.add(new ObjectNodeFieldSorter());
         }
         if (cmd.hasOption("a")) {
+            // TODO add different enrichment types
+            System.out.println(Arrays.toString(cmd.getOptionValues("a")));
             if (!cmd.hasOption("r"))
                 throw new RuntimeException("Cannot specify option 'add_api_paths' without option 'reformat'");
             transformerChain.add(new DeploymentApiPathIncluder(getApiVersion(cmd)));
@@ -90,8 +98,9 @@ public class CmApiDeploymentProcessor {
                 .longOpt("reformat")
                 .build());
         options.addOption(Option.builder("a")
-                .desc("Add API paths (requires 'reformat')")
-                .longOpt("add_api_paths")
+                .desc("Add extra information (requires 'reformat')")
+                .valueSeparator(',')
+                .longOpt("add")
                 .build());
         options.addOption(Option.builder("h")
                 .desc("Show help screen")

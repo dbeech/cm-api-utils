@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
 
@@ -34,8 +35,15 @@ public class CmApiDeploymentProcessor {
     }
 
     private ObjectMapper buildOutputMapper(CommandLine cmd) {
-        //ObjectMapper mapper = new XmlMapper();
         ObjectMapper mapper = new ObjectMapper();
+        if (cmd.hasOption("o")) {
+            String outputType = cmd.getOptionValue("o");
+            if ("xml".equalsIgnoreCase(outputType)) {
+                mapper = new XmlMapper();
+            } else if ("yaml".equalsIgnoreCase(outputType)) {
+                mapper = new YAMLMapper();
+            }
+        }
         mapper.configure(SerializationFeature.INDENT_OUTPUT, cmd.hasOption("p"));
         return mapper;
     }
@@ -105,6 +113,11 @@ public class CmApiDeploymentProcessor {
         options.addOption(Option.builder("h")
                 .desc("Show help screen")
                 .longOpt("help")
+                .build());
+        options.addOption(Option.builder("o")
+                .desc("Output format json (default), xml or yaml")
+                .longOpt("output-format")
+                .hasArg().argName("FORMAT")
                 .build());
         options.addOption(Option.builder("s")
                 .desc("Sort the json object fields")

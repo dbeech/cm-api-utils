@@ -1,16 +1,11 @@
 package com.cloudera.ps;
 
-import com.cloudera.ps.cm.api.deployment.transform.DeploymentApiPathIncluder;
-import com.cloudera.ps.cm.api.deployment.transform.DeploymentTransformer;
-import com.cloudera.ps.cm.api.deployment.transform.ObjectNodeFieldSorter;
-import com.cloudera.ps.cm.api.deployment.transform.DeploymentReformatter;
+import com.cloudera.ps.cm.api.deployment.transform.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-import com.fasterxml.jackson.dataformat.xml.XmlFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
@@ -73,6 +68,7 @@ public class CmApiDeploymentProcessor {
 
     private List<DeploymentTransformer> buildTransformerChain(CommandLine cmd) {
         List<DeploymentTransformer> transformerChain = new LinkedList<DeploymentTransformer>();
+
         if (cmd.hasOption("r")) {
             transformerChain.add(new DeploymentReformatter());
         }
@@ -86,6 +82,7 @@ public class CmApiDeploymentProcessor {
                 throw new RuntimeException("Cannot specify option 'add_api_paths' without option 'reformat'");
             transformerChain.add(new DeploymentApiPathIncluder(getApiVersion(cmd)));
         }
+        transformerChain.add(new ObjectNodeFieldFilter());
         return transformerChain;
     }
 
